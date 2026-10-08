@@ -1,0 +1,1 @@
+pipecat-ai[openai,silero,deepgram,cartesia,webrtc,runner]==1.12.0

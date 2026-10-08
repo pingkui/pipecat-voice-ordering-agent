@@ -1,0 +1,17 @@
+{
+  "restaurant": "Maple & Thyme (fictional)",
+  "hours": {"open": "11:00", "close": "22:00"},
+  "address": "12 Example Street",
+  "delivery_fee_cents": 400,
+  "delivery_minimum_cents": 2000,
+  "max_party_size": 8,
+  "items": [
+    {"id": "margherita", "name": "Margherita pizza", "variants": {"small": 1000, "large": 1500}, "allergens": ["gluten", "milk"]},
+    {"id": "pepperoni", "name": "Pepperoni pizza", "variants": {"small": 1200, "large": 1700}, "allergens": ["gluten", "milk"]},
+    {"id": "caesar", "name": "Caesar salad", "price_cents": 900, "allergens": ["egg", "fish", "milk"]},
+    {"id": "burger", "name": "Classic burger", "price_cents": 1300, "allergens": ["gluten", "milk", "sesame"]},
+    {"id": "padthai", "name": "Pad Thai", "price_cents": 1400, "allergens": ["peanut", "egg", "soy", "shellfish"]},
+    {"id": "fries", "name": "Fries", "price_cents": 500, "allergens": []},
+    {"id": "lemonade", "name": "Lemonade", "price_cents": 400, "allergens": []}
+  ]
+}
