@@ -48,6 +48,12 @@ browser mic -> speech-to-text -> LLM (tools) -> text-to-speech -> browser speake
 - The development server starts and serves the browser client on `127.0.0.1:7860`.
 - Model-only latency measured in the text simulation: **median 2.4 s, p90 4.4 s per LLM call** (46 calls). That is the reasoning model's raw call time with no streaming to speech; it is too slow for a natural phone conversation, which is why `bot.py` takes the LLM from environment variables so a fast, non-reasoning model can be dropped in.
 
+- Switching the reasoning off helps a lot (measured from this server to the Kimi API, streaming, 3 runs per setting, so a rough figure):
+  first token after **1.36 s** median with `kimi-k2.6` and `{"thinking": {"type": "disabled"}}`, against 4.84 s with the default (one
+  successful run out of three). The scenarios were rerun with reasoning off: **10/10 pass**, full-call median 1.9 s, p90 2.5 s (55 calls).
+  Set it with `LLM_EXTRA_BODY='{"thinking":{"type":"disabled"}}'`. A first run with reasoning off failed one scenario, but that was the
+  script, not the agent: the model re-asked "pickup?" and used up the caller's confirmation line (see `finish_with_yes` in `docs/TESTING.md`).
+
 ## Not done yet (be skeptical until it is)
 - **No end-to-end voice run yet.** Speech-to-text and text-to-speech need provider keys that were not available when this was built, so real audio latency, barge-in (interrupting the agent) and speech recognition accuracy are **unmeasured**. `bot.py` logs the user-to-bot latency of every turn to `latency.jsonl`; `docs/TESTING.md` describes how to turn that into a defensible figure (`tools/latency_report.py`). No such figure exists yet.
 - Scenario runs are single runs on one model: they show the harness and the rules work, not a pass rate.

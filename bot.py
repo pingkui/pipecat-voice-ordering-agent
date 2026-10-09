@@ -61,9 +61,14 @@ def build_tools(session: core.OrderSession):
     return ToolsSchema(standard_tools=schemas)
 
 
-def make_llm(base_url, api_key, model, menu):
+def make_llm(base_url, api_key, model, menu, extra_body=None):
+    """extra_body (a dict) is merged into every chat request, e.g. {"thinking": {"type": "disabled"}} for models that
+    support switching off reasoning. It can also come from the LLM_EXTRA_BODY environment variable (JSON)."""
+    if extra_body is None and os.environ.get("LLM_EXTRA_BODY"):
+        extra_body = json.loads(os.environ["LLM_EXTRA_BODY"])
     return OpenAILLMService(api_key=api_key, base_url=base_url,
-                            settings=OpenAILLMService.Settings(model=model, system_instruction=core.system_prompt(menu)))
+                            settings=OpenAILLMService.Settings(model=model, system_instruction=core.system_prompt(menu),
+                                                               extra=extra_body or {}))
 
 
 async def run_bot(transport, session: core.OrderSession, stt, tts, llm):

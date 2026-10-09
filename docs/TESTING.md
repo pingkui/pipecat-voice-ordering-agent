@@ -30,6 +30,13 @@ hundred ways; the state is what the kitchen would receive.
 
 Results so far are in the main README. They are single runs per scenario on one model.
 
+## A note on scripted callers
+A script cannot predict every question a model asks. If the model asks something the script did not expect (for example it re-asks
+"pickup or delivery?"), the scripted lines shift by one and the closing "yes" lands on the wrong question. The happy-path
+scenarios therefore carry `"finish_with_yes": True`: if the agent has read the current order back and is waiting for an answer
+when the script ends, the caller says "Yes, that's correct." once. The safety scenarios (no confirmation, impatient caller who
+does not follow up, allergy, out-of-hours booking) never get this, so they cannot be passed by that nudge.
+
 ## Adding a scenario
 Append a dict to `SCENARIOS` in `chat_sim.py`:
 ```python

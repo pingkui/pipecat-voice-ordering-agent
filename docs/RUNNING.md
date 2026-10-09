@@ -34,6 +34,10 @@ Accounts you need (each provider has its own pricing and free tier; check them b
 - **LLM:** the same three variables as above. For a phone-like feel use a **fast, non-reasoning model**; a reasoning model
   spends seconds before the first token (measured here: median 2.4 s and p90 4.4 s per call with a reasoning model, text only).
 
+If your model supports switching reasoning off, do it: set `LLM_EXTRA_BODY` to a JSON object that is merged into every chat request, for
+example `export LLM_EXTRA_BODY='{"thinking":{"type":"disabled"}}'` for Kimi (first token about 1.4 s instead of about 4.8 s in a rough
+measurement). Both `bot.py` and `chat_sim.py` read it.
+
 ```bash
 export DEEPGRAM_API_KEY=... CARTESIA_API_KEY=... CARTESIA_VOICE_ID=...
 export LLM_BASE_URL=... LLM_API_KEY=... LLM_MODEL=...
