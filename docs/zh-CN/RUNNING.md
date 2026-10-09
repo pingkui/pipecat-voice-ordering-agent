@@ -28,7 +28,7 @@ export LLM_MODEL=...
 
 ## 4. 运行语音 bot
 需要的账号(各服务商有各自的价格和免费额度,开始前请自行确认):
-- **语音识别:** Deepgram,`DEEPGRAM_API_KEY`。
+- **语音识别:** 要么用 Deepgram(`DEEPGRAM_API_KEY`),要么用任何带 OpenAI 风格 `POST {base}/audio/transcriptions`(multipart 表单带 `model` 和 `file`,返回带 `text` 的 JSON)的服务:设置 `STT_BASE_URL`(以 `/v1` 结尾)、`STT_API_KEY` 和 `STT_MODEL`。`transcriptions_stt.py` 就是这个适配器(为 `qwen3-asr-flash` 编写;它不发送语言,由模型自动检测)。设置了 `STT_BASE_URL` 时,它优先于 Deepgram。有些网关给每个模型单独发密钥:一个模型的密钥用在另一个模型上会被拒绝。
 - **语音合成:** 要么用 Cartesia(`CARTESIA_API_KEY` 和 `CARTESIA_VOICE_ID`,从他们的声音库里选一个),要么用任何带 OpenAI 风格 `POST {base}/audio/speech` 且以服务器推送事件流式返回的服务:设置 `TTS_BASE_URL`(以 `/v1` 结尾)、`TTS_API_KEY`、`TTS_MODEL` 和 `TTS_VOICE`。`speech_sse_tts.py` 就是这个适配器;它是针对某个网关后面的 `qwen3-tts-flash` 写的(24 kHz、16 位单声道,音色例如 `Cherry`)。设置了 `TTS_BASE_URL` 时,它优先于 Cartesia。接入之前先检查 TTS 接口:`python tools/tts_check.py --runs 5 --wav out.wav` 会报告首段音频的时间,并保存一个可以听的文件。
 - **LLM:** 与上面相同的三个变量。要有接近电话的手感,请用**快速的非推理模型**;推理模型在第一个 token 之前要花好几秒(这里实测:推理模型每次调用中位数 2.4 秒、p90 4.4 秒,纯文本)。
 

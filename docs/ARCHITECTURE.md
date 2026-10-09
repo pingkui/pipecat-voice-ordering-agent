@@ -32,7 +32,7 @@ flowchart LR
   OBS[latency observer] -.-> LOG[(latency.jsonl)]
 ```
 - **Transport:** Pipecat's WebRTC transport with its prebuilt browser client. No phone number is needed.
-- **Speech-to-text, text-to-speech:** Deepgram and Cartesia by default; each is one constructor in `bot.py`. `speech_sse_tts.py` adds a text-to-speech adapter for services with an OpenAI-style `/audio/speech` endpoint that streams server-sent events (selected by `TTS_BASE_URL`).
+- **Speech-to-text, text-to-speech:** Deepgram and Cartesia by default; each is one constructor in `bot.py`. `transcriptions_stt.py` adds a speech-to-text adapter for services with an OpenAI-style `/audio/transcriptions` endpoint (selected by `STT_BASE_URL`), and `speech_sse_tts.py` adds a text-to-speech adapter for services with an OpenAI-style `/audio/speech` endpoint that streams server-sent events (selected by `TTS_BASE_URL`).
 - **LLM:** any OpenAI-compatible chat API with tool calling, configured by environment variables.
 - **Core:** `OrderSession` holds the order, the confirmation state, reservations and transfers for one call.
 - **Observer:** `UserBotLatencyObserver` writes the time from the end of the caller's speech to the first reply audio.

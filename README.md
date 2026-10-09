@@ -33,6 +33,8 @@ browser mic -> speech-to-text -> LLM (tools) -> text-to-speech -> browser speake
 | `chat_sim.py` | scripted callers talk to the real model through the same prompt and tools; the final order state is asserted |
 | `test_pipeline.py` | the same scenarios through a real Pipecat pipeline (LLM service, tool schema, handlers, context aggregation) with speech replaced by text |
 | `speech_sse_tts.py` | text-to-speech adapter for `/audio/speech` endpoints that stream server-sent events (written against `qwen3-tts-flash`) |
+| `transcriptions_stt.py` | speech-to-text adapter for `/audio/transcriptions` endpoints (multipart `model` + `file`, JSON reply); written from the gateway's example for `qwen3-asr-flash` |
+| `test_stt_adapter.py` | 9 offline checks of that adapter against a local fake server |
 | `test_tts_adapter.py` | 13 offline checks of that adapter against a local fake server |
 | `test_tools.py` | 7 checks on the latency summary maths |
 | `tools/` | `latency_report.py` summarises `latency.jsonl`; `make_sample_calls.py` renders scenario runs as readable calls |
@@ -59,6 +61,9 @@ browser mic -> speech-to-text -> LLM (tools) -> text-to-speech -> browser speake
 - Text-to-speech measured live through the adapter (`qwen3-tts-flash` behind a gateway, 6 requests, voice `Cherry`): **first audio at a median of
   1.10 s** (max 1.33 s), and synthesis takes about 0.36 s per second of audio, so it keeps ahead of playback. The output is valid 24 kHz
   16-bit mono audio. The first-audio time is on top of the model's first-token time, so it counts against the call's latency budget.
+
+- The speech-to-text adapter is tested **offline only** (9 checks against a fake server). It has not yet been called against the real
+  `qwen3-asr-flash` service, so its reply parsing is based on the gateway's example, not on an observed reply.
 
 ## Not done yet (be skeptical until it is)
 - **No end-to-end voice run yet.** Speech-to-text and text-to-speech need provider keys that were not available when this was built, so real audio latency, barge-in (interrupting the agent) and speech recognition accuracy are **unmeasured**. `bot.py` logs the user-to-bot latency of every turn to `latency.jsonl`; `docs/TESTING.md` describes how to turn that into a defensible figure (`tools/latency_report.py`). No such figure exists yet.

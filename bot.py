@@ -19,6 +19,7 @@ from loguru import logger
 
 import order_core as core
 from speech_sse_tts import SpeechSSETTSService
+from transcriptions_stt import TranscriptionsSTTService
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
@@ -60,6 +61,15 @@ def build_tools(session: core.OrderSession):
         schemas.append(FunctionSchema(name=name, description=desc, properties=props,
                                       required=required, handler=handler))
     return ToolsSchema(standard_tools=schemas)
+
+
+def make_stt():
+    """STT_BASE_URL selects the generic `/audio/transcriptions` adapter (STT_API_KEY, STT_MODEL);
+    otherwise Deepgram is used (DEEPGRAM_API_KEY)."""
+    if os.environ.get("STT_BASE_URL"):
+        return TranscriptionsSTTService(api_key=os.environ["STT_API_KEY"], base_url=os.environ["STT_BASE_URL"],
+                                        model=os.environ["STT_MODEL"])
+    return DeepgramSTTService(api_key=os.environ["DEEPGRAM_API_KEY"])
 
 
 def make_tts():
@@ -128,7 +138,7 @@ async def run_bot(transport, session: core.OrderSession, stt, tts, llm):
 
 async def bot(runner_args: RunnerArguments):
     transport = await create_transport(runner_args, transport_params)
-    stt = DeepgramSTTService(api_key=os.environ["DEEPGRAM_API_KEY"])
+    stt = make_stt()
     tts = make_tts()
     session = core.OrderSession(core.load_menu())
     llm = make_llm(os.environ["LLM_BASE_URL"], os.environ["LLM_API_KEY"], os.environ["LLM_MODEL"], session.menu)

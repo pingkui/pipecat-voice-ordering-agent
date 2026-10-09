@@ -31,7 +31,7 @@ flowchart LR
   OBS[延迟观察器] -.-> LOG[(latency.jsonl)]
 ```
 - **传输:** Pipecat 的 WebRTC 传输,配自带的浏览器客户端。不需要电话号码。
-- **语音识别、语音合成:** 默认 Deepgram 和 Cartesia;在 `bot.py` 里各是一行构造函数。`speech_sse_tts.py` 额外提供一个语音合成适配器,适用于带 OpenAI 风格 `/audio/speech` 接口、并以服务器推送事件流式返回的服务(由 `TTS_BASE_URL` 选择)。
+- **语音识别、语音合成:** 默认 Deepgram 和 Cartesia;在 `bot.py` 里各是一行构造函数。`transcriptions_stt.py` 额外提供一个语音识别适配器,适用于带 OpenAI 风格 `/audio/transcriptions` 接口的服务(由 `STT_BASE_URL` 选择);`speech_sse_tts.py` 额外提供一个语音合成适配器,适用于带 OpenAI 风格 `/audio/speech` 接口、并以服务器推送事件流式返回的服务(由 `TTS_BASE_URL` 选择)。
 - **LLM:** 任意支持工具调用的 OpenAI 兼容聊天接口,通过环境变量配置。
 - **核心:** `OrderSession` 保存一通电话的订单、确认状态、预订和转接。
 - **观察器:** `UserBotLatencyObserver` 记录从来电者说完到回复的第一段音频之间的时间。

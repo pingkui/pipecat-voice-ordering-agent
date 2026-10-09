@@ -7,6 +7,7 @@
 |---|---|---|---|
 | `python test_core.py` | nothing | the ordering rules: sizes, quantities, totals, delivery, opening hours, confirmation gate | anything about a model or speech |
 | `python test_tools.py` | nothing | the latency summary maths | the latency itself |
+| `python test_stt_adapter.py` | nothing | the STT adapter against a local fake server: request shape, reply parsing, error handling | that the real service answers in the shape the adapter expects |
 | `python test_tts_adapter.py` | nothing | the TTS adapter against a local fake server: header stripping (even when the header is split), alignment, error handling | that a real TTS service still behaves the same way |
 | `python chat_sim.py --model M` | an LLM key | with a real model and the real prompt, scripted callers end in the right order state | speech recognition, audio quality, timing |
 | `python test_pipeline.py` | an LLM key | the same scenarios work through Pipecat's LLM service, tool schema, function-call handlers and context aggregation | the audio path, turn detection on real speech |
