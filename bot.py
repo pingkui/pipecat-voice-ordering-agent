@@ -18,6 +18,7 @@ import time
 from loguru import logger
 
 import order_core as core
+from speech_sse_tts import SpeechSSETTSService
 from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.adapters.schemas.tools_schema import ToolsSchema
 from pipecat.audio.vad.silero import SileroVADAnalyzer
@@ -59,6 +60,15 @@ def build_tools(session: core.OrderSession):
         schemas.append(FunctionSchema(name=name, description=desc, properties=props,
                                       required=required, handler=handler))
     return ToolsSchema(standard_tools=schemas)
+
+
+def make_tts():
+    """TTS_BASE_URL selects the generic `/audio/speech` SSE adapter (TTS_API_KEY, TTS_MODEL, TTS_VOICE);
+    otherwise Cartesia is used (CARTESIA_API_KEY, CARTESIA_VOICE_ID)."""
+    if os.environ.get("TTS_BASE_URL"):
+        return SpeechSSETTSService(api_key=os.environ["TTS_API_KEY"], base_url=os.environ["TTS_BASE_URL"],
+                                   model=os.environ["TTS_MODEL"], voice=os.environ["TTS_VOICE"])
+    return CartesiaTTSService(api_key=os.environ["CARTESIA_API_KEY"], voice_id=os.environ.get("CARTESIA_VOICE_ID"))
 
 
 def make_llm(base_url, api_key, model, menu, extra_body=None):
@@ -119,7 +129,7 @@ async def run_bot(transport, session: core.OrderSession, stt, tts, llm):
 async def bot(runner_args: RunnerArguments):
     transport = await create_transport(runner_args, transport_params)
     stt = DeepgramSTTService(api_key=os.environ["DEEPGRAM_API_KEY"])
-    tts = CartesiaTTSService(api_key=os.environ["CARTESIA_API_KEY"], voice_id=os.environ.get("CARTESIA_VOICE_ID"))
+    tts = make_tts()
     session = core.OrderSession(core.load_menu())
     llm = make_llm(os.environ["LLM_BASE_URL"], os.environ["LLM_API_KEY"], os.environ["LLM_MODEL"], session.menu)
     await run_bot(transport, session, stt, tts, llm)

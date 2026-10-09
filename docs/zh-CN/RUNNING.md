@@ -29,7 +29,7 @@ export LLM_MODEL=...
 ## 4. 运行语音 bot
 需要的账号(各服务商有各自的价格和免费额度,开始前请自行确认):
 - **语音识别:** Deepgram,`DEEPGRAM_API_KEY`。
-- **语音合成:** Cartesia,`CARTESIA_API_KEY` 和 `CARTESIA_VOICE_ID`(从他们的声音库里选一个)。
+- **语音合成:** 要么用 Cartesia(`CARTESIA_API_KEY` 和 `CARTESIA_VOICE_ID`,从他们的声音库里选一个),要么用任何带 OpenAI 风格 `POST {base}/audio/speech` 且以服务器推送事件流式返回的服务:设置 `TTS_BASE_URL`(以 `/v1` 结尾)、`TTS_API_KEY`、`TTS_MODEL` 和 `TTS_VOICE`。`speech_sse_tts.py` 就是这个适配器;它是针对某个网关后面的 `qwen3-tts-flash` 写的(24 kHz、16 位单声道,音色例如 `Cherry`)。设置了 `TTS_BASE_URL` 时,它优先于 Cartesia。接入之前先检查 TTS 接口:`python tools/tts_check.py --runs 5 --wav out.wav` 会报告首段音频的时间,并保存一个可以听的文件。
 - **LLM:** 与上面相同的三个变量。要有接近电话的手感,请用**快速的非推理模型**;推理模型在第一个 token 之前要花好几秒(这里实测:推理模型每次调用中位数 2.4 秒、p90 4.4 秒,纯文本)。
 
 如果你的模型支持关闭推理,请关掉:把 `LLM_EXTRA_BODY` 设成一个 JSON 对象,它会被并入每个聊天请求,例如对 Kimi 用 `export LLM_EXTRA_BODY='{"thinking":{"type":"disabled"}}'`(粗略测量:首个 token 约 1.4 秒,而不是约 4.8 秒)。`bot.py` 和 `chat_sim.py` 都会读取它。

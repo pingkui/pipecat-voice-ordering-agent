@@ -30,7 +30,11 @@ runs one scenario several times, which is the quickest way to see whether a scen
 ## 4. Run the voice bot
 Accounts you need (each provider has its own pricing and free tier; check them before you start):
 - **Speech-to-text:** Deepgram, `DEEPGRAM_API_KEY`.
-- **Text-to-speech:** Cartesia, `CARTESIA_API_KEY` and `CARTESIA_VOICE_ID` (pick a voice from their library).
+- **Text-to-speech:** either Cartesia (`CARTESIA_API_KEY` and `CARTESIA_VOICE_ID`, a voice from their library), or any service with an
+  OpenAI-style `POST {base}/audio/speech` that streams server-sent events: set `TTS_BASE_URL` (ending in `/v1`), `TTS_API_KEY`,
+  `TTS_MODEL` and `TTS_VOICE`. `speech_sse_tts.py` is that adapter; it was written against `qwen3-tts-flash` behind such a gateway
+  (24 kHz, 16-bit mono, voice such as `Cherry`). If `TTS_BASE_URL` is set it wins over Cartesia. Check a TTS endpoint before wiring
+  it in: `python tools/tts_check.py --runs 5 --wav out.wav` reports time to first audio and saves a file you can listen to.
 - **LLM:** the same three variables as above. For a phone-like feel use a **fast, non-reasoning model**; a reasoning model
   spends seconds before the first token (measured here: median 2.4 s and p90 4.4 s per call with a reasoning model, text only).
 
