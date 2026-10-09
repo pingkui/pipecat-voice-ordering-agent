@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/SECURITY.md)
+
 # Security and privacy notes
 
 This is a demo, not a hardened service. These are the risks I know about and what is, and is not, done about them.

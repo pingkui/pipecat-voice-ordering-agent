@@ -1,3 +1,5 @@
+**English** | [简体中文](README.zh-CN.md)
+
 # Voice ordering agent (Pipecat) with a deterministic core
 
 A phone-style voice agent for a restaurant: it takes food orders, answers menu questions, books tables and hands

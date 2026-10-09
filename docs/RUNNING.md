@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/RUNNING.md)
+
 # Running it
 
 ## 1. Install

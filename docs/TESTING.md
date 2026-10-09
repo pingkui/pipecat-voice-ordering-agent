@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/TESTING.md)
+
 # Testing
 
 ## What each test proves

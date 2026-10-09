@@ -1,3 +1,5 @@
+**English** | [简体中文](zh-CN/ARCHITECTURE.md)
+
 # Architecture
 
 ## Goal and the rule behind the design
