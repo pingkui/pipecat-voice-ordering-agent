@@ -31,6 +31,46 @@ def extract_text(payload) -> str | None:
     return None
 
 
+def parse_reply(body: str) -> tuple[str | None, object]:
+    """Return (text, payload) from a reply that is either one JSON object or a server-sent event stream.
+
+    The stream form (seen from the qwen3-asr-flash gateway even when `stream` is not requested) is
+        data: {"type": "transcript.text.delta", "delta": "..."}
+        data: {"type": "transcript.text.done", "text": "..."}
+    The `done` event's full text wins; if there is none, the deltas are joined.
+    """
+    try:
+        payload = json.loads(body)
+        return extract_text(payload), payload
+    except ValueError:
+        pass
+    deltas, done, events = [], None, []
+    for line in body.splitlines():
+        line = line.strip()
+        if not line.startswith("data:"):
+            continue
+        data = line[5:].strip()
+        if not data or data == "[DONE]":
+            continue
+        try:
+            event = json.loads(data)
+        except ValueError:
+            continue
+        events.append(event)
+        kind = str(event.get("type", ""))
+        if kind.endswith(".done") and isinstance(event.get("text"), str):
+            done = event["text"]
+        elif isinstance(event.get("delta"), str):
+            deltas.append(event["delta"])
+        elif "error" in kind:
+            return None, event
+    if done is not None:
+        return done, events
+    if deltas:
+        return "".join(deltas), events
+    return None, events or None
+
+
 class TranscriptionsSTTService(SegmentedSTTService):
     """Uploads each speech segment to an `/audio/transcriptions` endpoint and returns the transcript."""
 
@@ -74,11 +114,7 @@ class TranscriptionsSTTService(SegmentedSTTService):
                     yield ErrorFrame(error=f"STT request failed (status {resp.status}): {body[:300]}")
                     return
             await self.stop_processing_metrics()
-            try:
-                payload = json.loads(body)
-            except ValueError:
-                payload = None
-            text = extract_text(payload)
+            text, payload = parse_reply(body)
             if text is None:
                 yield ErrorFrame(error=f"STT reply has no text field: {body[:300]}")
                 return

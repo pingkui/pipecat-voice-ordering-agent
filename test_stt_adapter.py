@@ -13,7 +13,7 @@ from aiohttp import web                                   # noqa: E402
 from loguru import logger                                 # noqa: E402
 
 from pipecat.frames.frames import ErrorFrame, TranscriptionFrame  # noqa: E402
-from transcriptions_stt import TranscriptionsSTTService, extract_text  # noqa: E402
+from transcriptions_stt import TranscriptionsSTTService, extract_text, parse_reply  # noqa: E402
 
 logger.remove()
 results = []
@@ -50,6 +50,18 @@ async def transcriptions(request):
         return web.json_response({"result": "no text key here"})
     if mode == "empty":
         return web.json_response({"text": "   "})
+    if mode == "sse":
+        ev = lambda o: ("data: " + json.dumps(o) + "\n\n")
+        return web.Response(text=ev({"type": "transcript.text.delta", "delta": "Two large "})
+                            + ev({"type": "transcript.text.delta", "delta": "pizzas"})
+                            + ev({"type": "transcript.text.done", "text": "Two large pizzas, please."}),
+                            content_type="text/event-stream")
+    if mode == "sse_deltas_only":
+        ev = lambda o: ("data: " + json.dumps(o) + "\n\n")
+        return web.Response(text=ev({"type": "transcript.text.delta", "delta": "Two "})
+                            + ev({"type": "transcript.text.delta", "delta": "fries"}), content_type="text/event-stream")
+    if mode == "sse_error":
+        return web.Response(text='data: {"type": "error", "message": "bad audio"}\n\n', content_type="text/event-stream")
     if mode == "nested":
         return web.json_response({"data": {"text": " two large pizzas "}})
     return web.json_response({"text": "  Two large margherita pizzas, please.  "})
@@ -84,6 +96,16 @@ async def main():
           and seen["fields"]["file"][1] == wav and seen["fields"]["file"][0] == "speech.wav")
     frames = await run(svc("nested"), wav)
     check("a transcript nested under data is found", len(frames) == 1 and frames[0].text == "two large pizzas")
+    frames = await run(svc("sse"), wav)
+    check("an event-stream reply uses the final text of the done event",
+          len(frames) == 1 and frames[0].text == "Two large pizzas, please.")
+    frames = await run(svc("sse_deltas_only"), wav)
+    check("an event stream with no done event falls back to the joined deltas",
+          len(frames) == 1 and frames[0].text == "Two fries")
+    frames = await run(svc("sse_error"), wav)
+    check("an error event in the stream becomes an ErrorFrame", len(frames) == 1 and isinstance(frames[0], ErrorFrame))
+    check("parse_reply ignores malformed lines and [DONE]",
+          parse_reply('data: oops\n\ndata: {"type":"x.done","text":"ok"}\n\ndata: [DONE]\n')[0] == "ok")
     frames = await run(svc("http401"), wav)
     check("an HTTP error becomes an ErrorFrame with the status",
           len(frames) == 1 and isinstance(frames[0], ErrorFrame) and "401" in frames[0].error)
