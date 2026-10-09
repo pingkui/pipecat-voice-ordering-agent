@@ -6,6 +6,7 @@ Pipecat's segmenting base class cuts the caller's speech at the voice-activity b
 `file`, exactly like the gateway's own curl example, and does not send a language: the model detects it.
 Written for `qwen3-asr-flash` behind such a gateway; check the reply shape against your service.
 """
+import asyncio
 import json
 from collections.abc import AsyncGenerator
 
@@ -16,6 +17,10 @@ from pipecat.frames.frames import ErrorFrame, Frame, TranscriptionFrame
 from pipecat.services.settings import STTSettings
 from pipecat.services.stt_service import SegmentedSTTService
 from pipecat.utils.time import time_now_iso8601
+
+
+RETRY_STATUSES = (429, 503)           # "too many requests" or "busy": safe to ask again, nothing has been returned yet
+RETRY_DELAYS = (0.4, 0.8)             # seconds to wait before the second and third attempt
 
 
 def extract_text(payload) -> str | None:
@@ -101,18 +106,25 @@ class TranscriptionsSTTService(SegmentedSTTService):
     async def run_stt(self, audio: bytes) -> AsyncGenerator[Frame, None]:
         if self._session is None or self._session.closed:
             self._session = aiohttp.ClientSession(timeout=self._timeout)
-        form = aiohttp.FormData()
-        form.add_field("model", self._settings.model)
-        form.add_field("file", audio, filename="speech.wav", content_type="audio/wav")
         try:
             await self.start_processing_metrics()
-            async with self._session.post(self._url, data=form,
-                                          headers={"Authorization": f"Bearer {self._api_key}"}) as resp:
-                body = await resp.text()
-                if resp.status != 200:
-                    logger.error(f"{self} transcription failed (status {resp.status})")
-                    yield ErrorFrame(error=f"STT request failed (status {resp.status}): {body[:300]}")
-                    return
+            for attempt in range(len(RETRY_DELAYS) + 1):
+                form = aiohttp.FormData()                  # a form can be sent once, so build it for each attempt
+                form.add_field("model", self._settings.model)
+                form.add_field("file", audio, filename="speech.wav", content_type="audio/wav")
+                async with self._session.post(self._url, data=form,
+                                              headers={"Authorization": f"Bearer {self._api_key}"}) as resp:
+                    body = await resp.text()
+                    status = resp.status
+                if status in RETRY_STATUSES and attempt < len(RETRY_DELAYS):
+                    logger.warning(f"{self} status {status}, retrying in {RETRY_DELAYS[attempt]}s")
+                    await asyncio.sleep(RETRY_DELAYS[attempt])
+                    continue
+                break
+            if status != 200:
+                logger.error(f"{self} transcription failed (status {status})")
+                yield ErrorFrame(error=f"STT request failed (status {status}): {body[:300]}")
+                return
             await self.stop_processing_metrics()
             text, payload = parse_reply(body)
             if text is None:

@@ -9,6 +9,7 @@ The first delta starts with a WAV header (its length fields are placeholders); t
 This was written against the `qwen3-tts-flash` model behind such a gateway; nothing in it is specific to one vendor,
 but the event shape is: check it against your service before relying on it.
 """
+import asyncio
 import base64
 import json
 from collections.abc import AsyncGenerator
@@ -21,6 +22,8 @@ from pipecat.services.settings import TTSSettings
 from pipecat.services.tts_service import TTSService
 
 DEFAULT_SAMPLE_RATE = 24000
+RETRY_STATUSES = (429, 503)           # the service says "too many requests" or "busy": nothing has been spoken yet
+RETRY_DELAYS = (0.4, 0.8)             # seconds to wait before the second and third attempt
 
 
 class WavStreamStripper:
@@ -108,7 +111,19 @@ class SpeechSSETTSService(TTSService):
         body = {"model": self._settings.model, "input": text, "voice": self._settings.voice, "stream": True}
         headers = {"Authorization": f"Bearer {self._api_key}", "Content-Type": "application/json"}
         try:
-            async with self._session.post(self._url, json=body, headers=headers) as resp:
+            attempt = 0
+            while True:
+                resp_cm = self._session.post(self._url, json=body, headers=headers)
+                resp = await resp_cm.__aenter__()
+                if resp.status in RETRY_STATUSES and attempt < len(RETRY_DELAYS):
+                    await resp.release()
+                    await resp_cm.__aexit__(None, None, None)
+                    logger.warning(f"{self} status {resp.status}, retrying in {RETRY_DELAYS[attempt]}s")
+                    await asyncio.sleep(RETRY_DELAYS[attempt])
+                    attempt += 1
+                    continue
+                break
+            try:
                 if resp.status != 200:
                     detail = (await resp.text())[:300]
                     logger.error(f"{self} speech request failed (status {resp.status})")
@@ -144,6 +159,8 @@ class SpeechSSETTSService(TTSService):
                         await self.stop_ttfb_metrics()
                         first = False
                     yield TTSAudioRawFrame(pcm, src_rate, 1, context_id=context_id)
+            finally:
+                await resp_cm.__aexit__(None, None, None)
         except (aiohttp.ClientError, TimeoutError) as e:
             logger.error(f"{self} speech request error: {e}")
             yield ErrorFrame(error=f"TTS request error: {e}")

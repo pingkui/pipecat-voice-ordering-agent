@@ -50,7 +50,20 @@ Append a dict to `SCENARIOS` in `chat_sim.py`:
 the ones where the caller pushes against a rule: a quantity of 50, a changed address after the read-back, two items with
 different notes, a caller who answers a question that was not asked.
 
-## Measuring voice latency (the number that is still missing)
+## The synthetic caller (`tools/virtual_caller.py`)
+Runs the same scenarios through the whole voice pipeline with the real services: a second synthetic voice speaks each caller line,
+the audio is fed in at real-time pace with silence in between (like a live microphone), and voice-activity detection, speech-to-text,
+the model with tools and text-to-speech all run for real. For every turn it records what the speech-to-text heard, a timeline of
+the stages, and the reply latency (end of the caller's audio to the first reply audio). Then it checks the order state as the text tests do.
+
+What it is not: it skips the browser, WebRTC and a real microphone, and synthetic speech is easier to recognise than a person on a
+noisy line, so accuracy and latency here are a best case. It measures reply audio where it leaves the text-to-speech service.
+
+If your text-to-speech key is rate limited (the one used here allows about 10 requests a minute), set `TTS_REQUESTS_PER_MINUTE` and
+`TTS_REQUESTS_PER_TURN`: before each turn the caller waits for room in the last minute, so the wait never counts as reply latency.
+A full run of the ten scenarios then takes about fifteen minutes.
+
+## Measuring voice latency properly
 The latency of a voice agent is the time between the caller **finishing** a sentence and hearing the **first audio** of the reply.
 `bot.py` records exactly that per turn into `latency.jsonl`. A defensible measurement:
 1. Fix the providers and the region the bot runs in, and write them down next to the result.
@@ -61,8 +74,9 @@ The latency of a voice agent is the time between the caller **finishing** a sent
 5. Report tool-call turns separately: they cost an extra model call.
 6. State what was not controlled (network distance between you, the server and the providers).
 
-Do not quote a single fast turn. Until this has been run with real keys, **no end-to-end latency figure exists for this
-project**; the only number measured is the model-only call time in the text simulator.
+Do not quote a single fast turn. The only end-to-end figures so far come from the synthetic caller (21 turns, median 7.7 s; see the main
+README). Nobody has measured it with a person speaking through a browser, and the protocol above has not been run at 30 turns on a
+live microphone.
 
 ## Manual checks that automated tests cannot do
 - **Barge-in:** speak while the agent is talking. It should stop and listen; note how long that takes.

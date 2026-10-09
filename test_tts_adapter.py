@@ -34,13 +34,18 @@ def sse(obj):
 
 
 PCM = bytes(range(256)) * 20                               # 5120 bytes of recognisable data
-state = {"seen": None}
+state = {"seen": None, "limited": 0, "calls": 0}
 
 
 async def speech(request):
     body = await request.json()
     state["seen"] = (dict(request.headers), body)
     mode = body["input"]
+    if mode.startswith("limited"):
+        state["calls"] += 1
+        if state["calls"] <= int(mode[len("limited"):] or 0):
+            return web.Response(status=429, text="Too many requests")
+        mode = "normal"
     if mode == "http500":
         return web.Response(status=500, text="boom")
     resp = web.StreamResponse(headers={"Content-Type": "text/event-stream"})
@@ -101,6 +106,17 @@ async def main():
     frames = await collect(svc, "error_event")
     check("an error event in the stream becomes an ErrorFrame",
           any(isinstance(f, ErrorFrame) for f in frames) and not any(isinstance(f, TTSAudioRawFrame) for f in frames))
+
+    import speech_sse_tts
+    speech_sse_tts.RETRY_DELAYS = (0.01, 0.01)               # keep the test quick
+    state["calls"] = 0
+    frames = await collect(svc, "limited2")
+    check("two 429 answers are retried and the third attempt succeeds",
+          state["calls"] == 3 and b"".join(f.audio for f in frames if isinstance(f, TTSAudioRawFrame)) == PCM)
+    state["calls"] = 0
+    frames = await collect(svc, "limited9")
+    check("a service that keeps answering 429 ends in an ErrorFrame after three attempts",
+          state["calls"] == 3 and len(frames) == 1 and isinstance(frames[0], ErrorFrame) and "429" in frames[0].error)
 
     dead = SpeechSSETTSService(api_key="k", base_url="http://127.0.0.1:1/v1", model="m", voice="v")
     frames = await collect(dead, "x")

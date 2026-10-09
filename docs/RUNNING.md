@@ -63,6 +63,10 @@ ssh -L 7860:127.0.0.1:7860 user@your-server
 ```
 Do not bind the bot to a public address without authentication and rate limits; see `SECURITY.md`.
 
+**Rate limits.** Check your text-to-speech provider's limit before a long session: every sentence the agent speaks is one request. The key
+used while building this allowed about 10 requests a minute, so a sustained conversation can be refused (429). The adapters retry a
+refused request up to three times with short waits, which does not help against a per-minute quota.
+
 ## 5. What a run writes
 | file | content |
 |---|---|

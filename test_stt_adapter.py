@@ -17,7 +17,7 @@ from transcriptions_stt import TranscriptionsSTTService, extract_text, parse_rep
 
 logger.remove()
 results = []
-seen = {}
+seen = {"calls": 0}
 
 
 def check(name, cond):
@@ -42,6 +42,11 @@ async def transcriptions(request):
         fields[part.name] = (part.filename, await part.read())
     seen["headers"], seen["fields"] = dict(request.headers), fields
     mode = fields["model"][1].decode()
+    if mode.startswith("limited"):
+        seen["calls"] += 1
+        if seen["calls"] <= int(mode[len("limited"):] or 0):
+            return web.Response(status=429, text="Too many requests")
+        mode = "ok"
     if mode == "http401":
         return web.json_response({"message": "bad key"}, status=401)
     if mode == "badjson":
@@ -115,6 +120,16 @@ async def main():
     check("a JSON reply without text becomes an ErrorFrame", len(frames) == 1 and isinstance(frames[0], ErrorFrame))
     frames = await run(svc("empty"), wav)
     check("an empty transcript produces no frame", frames == [])
+    import transcriptions_stt
+    transcriptions_stt.RETRY_DELAYS = (0.01, 0.01)
+    seen["calls"] = 0
+    frames = await run(svc("limited2"), wav)
+    check("two 429 answers are retried and the third attempt returns the transcript",
+          seen["calls"] == 3 and len(frames) == 1 and isinstance(frames[0], TranscriptionFrame))
+    seen["calls"] = 0
+    frames = await run(svc("limited9"), wav)
+    check("a service that keeps answering 429 ends in an ErrorFrame after three attempts",
+          seen["calls"] == 3 and len(frames) == 1 and isinstance(frames[0], ErrorFrame) and "429" in frames[0].error)
     dead = TranscriptionsSTTService(api_key="k", base_url="http://127.0.0.1:1/v1", model="m")
     frames = await run(dead, wav)
     check("an unreachable server becomes an ErrorFrame, not an exception",

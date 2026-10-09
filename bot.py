@@ -82,13 +82,15 @@ def make_tts():
 
 
 def make_llm(base_url, api_key, model, menu, extra_body=None):
-    """extra_body (a dict) is merged into every chat request, e.g. {"thinking": {"type": "disabled"}} for models that
-    support switching off reasoning. It can also come from the LLM_EXTRA_BODY environment variable (JSON)."""
+    """extra_body (a dict) is sent as extra JSON fields on every chat request, e.g. {"thinking": {"type": "disabled"}} for
+    models that support switching off reasoning. It can also come from the LLM_EXTRA_BODY environment variable (JSON).
+    Pipecat hands `settings.extra` to the OpenAI SDK as keyword arguments, and the SDK rejects unknown ones, so the fields
+    have to travel inside the SDK's own `extra_body` argument."""
     if extra_body is None and os.environ.get("LLM_EXTRA_BODY"):
         extra_body = json.loads(os.environ["LLM_EXTRA_BODY"])
     return OpenAILLMService(api_key=api_key, base_url=base_url,
                             settings=OpenAILLMService.Settings(model=model, system_instruction=core.system_prompt(menu),
-                                                               extra=extra_body or {}))
+                                                               extra={"extra_body": extra_body} if extra_body else {}))
 
 
 async def run_bot(transport, session: core.OrderSession, stt, tts, llm):
