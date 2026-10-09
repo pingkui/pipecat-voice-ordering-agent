@@ -5,3 +5,4 @@ runs/
 latency.jsonl
 calls.jsonl
 .env
+CLAUDE.md
